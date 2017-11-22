@@ -1,9 +1,11 @@
 from math import *
-import random
+import random, h5py, os, multiprocessing
 import numpy as np
 from board import TakBoard
-
+from datetime import date
 #np.set_printoptions(threshold=np.nan)
+
+game_index = 0
 
 class Node:
 	""" A node in the game tree. Note wins is always from the viewpoint of playerJustMoved.
@@ -62,6 +64,31 @@ class Node:
 			 s += str(c) + "\n"
 		return s
 
+def rollout(state,node):
+	# Select
+	while node.untriedMoves == [] and node.childNodes != []: # node is fully expanded and non-terminal
+		node = node.UCTSelectChild()
+		state.exec_move(node.move)
+
+	# Expand
+	if node.untriedMoves != []: # if we can expand (i.e. state/node is non-terminal)
+		m = random.choice(node.untriedMoves) 
+		state.exec_move(m)
+		node = node.AddChild(m,state) # add child and descend tree
+
+	# Rollout - this can often be made orders of magnitude quicker using a state.GetRandomMove() function
+	while (state.white_win == False and state.black_win == False): # while state is non-terminal
+		state.exec_move(random.choice(state.get_plays()))
+
+	# Backpropagate
+	while node != None: # backpropagate from the expanded node and work back to the root node
+		#print(state.white_win - state.black_win)
+		if state.player1_turn == True:
+			node.Update(state.white_win) # state is terminal. Update node with result from POV of node.playerJustMoved
+		else:
+			node.Update(state.black_win)
+		node = node.parentNode
+
 
 def UCT(rootstate, itermax, verbose = False):
 	""" Conduct a UCT search for itermax iterations starting from rootstate.
@@ -74,29 +101,7 @@ def UCT(rootstate, itermax, verbose = False):
 		node = rootnode
 		state = rootstate.clone()
 
-		# Select
-		while node.untriedMoves == [] and node.childNodes != []: # node is fully expanded and non-terminal
-			node = node.UCTSelectChild()
-			state.exec_move(node.move)
-
-		# Expand
-		if node.untriedMoves != []: # if we can expand (i.e. state/node is non-terminal)
-			m = random.choice(node.untriedMoves) 
-			state.exec_move(m)
-			node = node.AddChild(m,state) # add child and descend tree
-
-		# Rollout - this can often be made orders of magnitude quicker using a state.GetRandomMove() function
-		while (state.white_win == False and state.black_win == False): # while state is non-terminal
-			state.exec_move(random.choice(state.get_plays()))
-
-		# Backpropagate
-		while node != None: # backpropagate from the expanded node and work back to the root node
-			#print(state.white_win - state.black_win)
-			if state.player1_turn == True:
-				node.Update(state.white_win) # state is terminal. Update node with result from POV of node.playerJustMoved
-			else:
-				node.Update(state.black_win)
-			node = node.parentNode
+		rollout(state, node)
 
 	# Output some information about the tree - can be omitted
 	if (verbose): 
@@ -104,7 +109,7 @@ def UCT(rootstate, itermax, verbose = False):
 
 	return sorted(rootnode.childNodes, key = lambda c: c.visits)
 				
-def UCTPlayGame(game_num):
+def UCTPlayGame():
 	""" Play a sample game between two UCT players where each player gets a different number 
 		of UCT iterations (= simulations = tree nodes).
 	"""
@@ -113,21 +118,18 @@ def UCTPlayGame(game_num):
 
 	game = TakBoard(5)
 	while (game.white_win == False and game.black_win == False):
-		childNodes = UCT(rootstate = game, itermax = 1000, verbose = verbose) # play with values for itermax and verbose = True
+		childNodes = UCT(rootstate = game, itermax = 10000, verbose = verbose) # play with values for itermax and verbose = True
 		m = childNodes[-1].move
-		if verbose == True:
-			win = childNodes[-1].wins
-			trys = childNodes[-1].visits
-			print("Best Move: {}, Wins: {}, Trys: {}, Prob: {:.6f}".format(m, win, trys, win/trys))
+		#win = childNodes[-1].wins
+		#trys = childNodes[-1].visits
+		#print("Best Move: {}, Wins: {}, Trys: {}, Prob: {:.6f}".format(m, win, trys, win/trys))
 
 		np_state = game.get_numpy_board()
 		addition = np.full(1575, -1.0, dtype=float)
 		for moves in childNodes:
 			addition[moves.move["index"]] = moves.wins/moves.visits
 
-		train_data.append({"prob":addition, "state":np_state})
-
-		#print(train_data[-1]["prob"])
+		train_data.append({"probs":addition, "state":np_state})
 
 		game.exec_move(m)
 
@@ -140,11 +142,30 @@ def UCTPlayGame(game_num):
 
 	return train_data
 
+
+def main():
+	return UCTPlayGame()
+
+
+def save(training_data):
+	#print(training_data)
+	global game_index
+	with h5py.File(os.path.join(os.getcwd(), "games", "Game_{}_{}".format(game_index, date.today())), 'w') as hf:
+		print("Saving Game{}".format(game_index))
+		print("Game has {} moves".format(len(training_data)))
+		for index, gamedata in enumerate(training_data):
+			hf.create_dataset("state_{}".format(index), data=gamedata["state"], compression="gzip", compression_opts=9)
+			hf.create_dataset("probs_{}".format(index), data=gamedata["probs"], compression="gzip", compression_opts=9)
+
+	game_index += 1
+
+
 if __name__ == "__main__":
 	""" Play a single game to the end using UCT for both players. 
 	"""
+	pool = multiprocessing.Pool(processes=8)
 	for x in range(500):
-		with h5py.File(os.path.join(os.getcwd(), "games", "Game_{}".format(x)), 'w') as hf:
-			training_data = UCTPlayGame()
-
+		pool.apply_async(main, callback=save)
+	pool.close()
+	pool.join()
 
