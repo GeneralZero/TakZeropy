@@ -65,6 +65,7 @@ class Node:
 		return s
 
 def rollout(state,node):
+	player1_turn = state.player1_turn
 	# Select
 	while node.untriedMoves == [] and node.childNodes != []: # node is fully expanded and non-terminal
 		node = node.UCTSelectChild()
@@ -83,7 +84,7 @@ def rollout(state,node):
 	# Backpropagate
 	while node != None: # backpropagate from the expanded node and work back to the root node
 		#print(state.white_win - state.black_win)
-		if state.player1_turn == True:
+		if player1_turn == True:
 			node.Update(state.white_win) # state is terminal. Update node with result from POV of node.playerJustMoved
 		else:
 			node.Update(state.black_win)
@@ -118,11 +119,11 @@ def UCTPlayGame():
 
 	game = TakBoard(5)
 	while (game.white_win == False and game.black_win == False):
-		childNodes, winrate = UCT(rootstate = game, itermax = 20, verbose = verbose) # play with values for itermax and verbose = True
-		m = childNodes[-1].move
+		childNodes, winrate = UCT(rootstate = game, itermax = 100, verbose = verbose) # play with values for itermax and verbose = True
+		m =  random.choice(childNodes[-1])
 		#win = childNodes[-1].wins
 		#trys = childNodes[-1].visits
-		#print("Best Move: {}, Wins: {}, Trys: {}, Prob: {:.6f}".format(m, win, trys, win/trys))
+		#print("Random Move: {}, Wins: {}, Trys: {}, Prob: {:.6f}".format(m, win, trys, win/trys))
 
 		np_state = game.get_numpy_board()
 		addition = np.full(1576, -1.0, dtype=float)
@@ -133,7 +134,7 @@ def UCTPlayGame():
 
 		train_data.append({"probs":addition, "state":np_state})
 
-		game.exec_move(m)
+		game.exec_move(m.move)
 
 	if game.white_win == True:
 		print("White Player wins!")
@@ -143,7 +144,6 @@ def UCTPlayGame():
 		print("Nobody wins!")
 
 	return train_data
-
 
 def main():
 	return UCTPlayGame()
@@ -166,7 +166,7 @@ if __name__ == "__main__":
 	""" Play a single game to the end using UCT for both players.
 	"""
 	#main()
-	pool = multiprocessing.Pool(processes=1)
+	pool = multiprocessing.Pool(processes=4)
 	for x in range(500):
 		pool.apply_async(main, callback=save)
 	pool.close()
