@@ -19,7 +19,7 @@ class Node:
 		self.visits = 0
 		self.untriedMoves = state.get_plays() # future child nodes
 		self.player1_turn = state.player1_turn # the only part of the state that the Node needs later
-		
+
 	def UCTSelectChild(self):
 		""" Use the UCB1 formula to select a child node. Often a constant UCTK is applied so we have
 			lambda c: c.wins/c.visits + UCTK * sqrt(2*log(self.visits)/c.visits to vary the amount of
@@ -27,7 +27,7 @@ class Node:
 		"""
 		s = sorted(self.childNodes, key = lambda c: c.wins/c.visits + sqrt(2*log(self.visits)/c.visits))[-1]
 		return s
-	
+
 	def AddChild(self, m, s):
 		""" Remove m from untriedMoves and add a new child node for this move.
 			Return the added child node
@@ -36,7 +36,7 @@ class Node:
 		self.untriedMoves.remove(m)
 		self.childNodes.append(n)
 		return n
-	
+
 	def Update(self, result):
 		""" Update this node - one additional visit and result additional wins. result must be from the viewpoint of playerJustmoved.
 		"""
@@ -72,7 +72,7 @@ def rollout(state,node):
 
 	# Expand
 	if node.untriedMoves != []: # if we can expand (i.e. state/node is non-terminal)
-		m = random.choice(node.untriedMoves) 
+		m = random.choice(node.untriedMoves)
 		state.exec_move(m)
 		node = node.AddChild(m,state) # add child and descend tree
 
@@ -97,20 +97,20 @@ def UCT(rootstate, itermax, verbose = False):
 
 	rootnode = Node(state = rootstate)
 
-	for i in range(itermax):
+	for i in range(itermax * len(rootnode.untriedMoves)):
 		node = rootnode
 		state = rootstate.clone()
 
 		rollout(state, node)
 
 	# Output some information about the tree - can be omitted
-	if (verbose): 
+	if (verbose):
 		print(rootnode.TreeToString(0))
 
-	return sorted(rootnode.childNodes, key = lambda c: c.visits)
-				
+	return sorted(rootnode.childNodes, key = lambda c: c.visits), rootnode.wins/rootnode.visits
+
 def UCTPlayGame():
-	""" Play a sample game between two UCT players where each player gets a different number 
+	""" Play a sample game between two UCT players where each player gets a different number
 		of UCT iterations (= simulations = tree nodes).
 	"""
 	train_data = []
@@ -118,16 +118,18 @@ def UCTPlayGame():
 
 	game = TakBoard(5)
 	while (game.white_win == False and game.black_win == False):
-		childNodes = UCT(rootstate = game, itermax = 10000, verbose = verbose) # play with values for itermax and verbose = True
+		childNodes, winrate = UCT(rootstate = game, itermax = 20, verbose = verbose) # play with values for itermax and verbose = True
 		m = childNodes[-1].move
 		#win = childNodes[-1].wins
 		#trys = childNodes[-1].visits
 		#print("Best Move: {}, Wins: {}, Trys: {}, Prob: {:.6f}".format(m, win, trys, win/trys))
 
 		np_state = game.get_numpy_board()
-		addition = np.full(1575, -1.0, dtype=float)
+		addition = np.full(1576, -1.0, dtype=float)
 		for moves in childNodes:
 			addition[moves.move["index"]] = moves.wins/moves.visits
+		addition[1575] = winrate
+		#print(winrate)
 
 		train_data.append({"probs":addition, "state":np_state})
 
@@ -137,7 +139,7 @@ def UCTPlayGame():
 		print("White Player wins!")
 	elif game.black_win == True:
 		print("Black Player wins!")
-	else: 
+	else:
 		print("Nobody wins!")
 
 	return train_data
@@ -161,9 +163,10 @@ def save(training_data):
 
 
 if __name__ == "__main__":
-	""" Play a single game to the end using UCT for both players. 
+	""" Play a single game to the end using UCT for both players.
 	"""
-	pool = multiprocessing.Pool(processes=8)
+	#main()
+	pool = multiprocessing.Pool(processes=1)
 	for x in range(500):
 		pool.apply_async(main, callback=save)
 	pool.close()
