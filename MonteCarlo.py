@@ -120,7 +120,7 @@ def UCTPlayGame():
 	game = TakBoard(5)
 	while (game.white_win == False and game.black_win == False):
 		childNodes, winrate = UCT(rootstate = game, itermax = 100, verbose = verbose) # play with values for itermax and verbose = True
-		m =  random.choice(childNodes[-1])
+		m =  random.choice(childNodes)
 		#win = childNodes[-1].wins
 		#trys = childNodes[-1].visits
 		#print("Random Move: {}, Wins: {}, Trys: {}, Prob: {:.6f}".format(m, win, trys, win/trys))
