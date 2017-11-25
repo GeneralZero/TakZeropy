@@ -100,7 +100,7 @@ def UCT(rootstate, itermax, verbose = False):
 
 	rootnode = Node(state = rootstate)
 	itter = itermax * len(rootnode.untriedMoves)
-	print(itter)
+	#print(itter)
 
 	for i in range(itter):
 		node = rootnode
@@ -167,11 +167,11 @@ if __name__ == "__main__":
 	""" Play a single game to the end using UCT for both players.
 	"""
 	#cProfile.run('main()')
-	save(UCTPlayGame())
+	#save(UCTPlayGame())
 
 
-	#pool = multiprocessing.Pool(processes=4)
-	#for x in range(500):
-	#	pool.apply_async(UCTPlayGame, callback=save)
-	#pool.close()
-	#pool.join()
+	pool = multiprocessing.Pool(processes=7)
+	for x in range(500):
+		pool.apply_async(UCTPlayGame, callback=save)
+	pool.close()
+	pool.join()

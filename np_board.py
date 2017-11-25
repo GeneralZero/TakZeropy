@@ -130,7 +130,7 @@ class TakBoard():
 		#First or second play
 		if self.move_number <= 1:
 			for x,y in np.ndindex(self.board.shape[:2]):
-				if np.count_nonzero(self.board[x][y]) == 0:
+				if np.count_nonzero(self.board[x,y]) == 0:
 					temp_move = {"movetype": "p", "piece":"", "placement":self.get_index_from_ints(self.board_size - x -1, self.board_size - y -1)}
 					temp_move["index"] = self.get_play_index(temp_move)
 					play_array.append(temp_move)
@@ -139,7 +139,7 @@ class TakBoard():
 		else:
 			##Add placements
 			for x,y in np.ndindex(self.board.shape[:2]):
-				cell = self.board[x][y]
+				cell = self.board[x,y]
 				if np.count_nonzero(cell) == 0:
 					temp_move = {"movetype": "p", "piece":"", "placement":self.get_index_from_ints(self.board_size - x -1, self.board_size - y -1)}
 					temp_move["index"] = self.get_play_index(temp_move)
@@ -165,7 +165,7 @@ class TakBoard():
 
 							#Down
 							for move_x in range(x+1, self.board_size):
-								cell_m = self.board[move_x][y]
+								cell_m = self.board[move_x,y]
 								last_new_index = np.argmax(cell_m==0) -1
 								if last_new_index < 0:
 									last_new_index = 0
@@ -188,7 +188,7 @@ class TakBoard():
 							s_distance = 0
 							#Up
 							for move_x in range(x-1, -1, -1):
-								cell_m = self.board[move_x][y]
+								cell_m = self.board[move_x,y]
 								last_new_index = np.argmax(cell_m==0) -1
 								if last_new_index < 0:
 									last_new_index = 0								
@@ -211,7 +211,7 @@ class TakBoard():
 							s_distance = 0
 							#Left
 							for move_y in range(y-1, -1, -1):
-								cell_m = self.board[x][move_y]
+								cell_m = self.board[x,move_y]
 								last_new_index = np.argmax(cell_m==0) -1
 								if last_new_index < 0:
 									last_new_index = 0								
@@ -233,7 +233,7 @@ class TakBoard():
 							s_distance = 0								
 							#Right
 							for move_y in range(y+1, self.board_size):
-								cell_m = self.board[x][move_y]
+								cell_m = self.board[x,move_y]
 								last_new_index = np.argmax(cell_m==0) -1
 								if last_new_index < 0:
 									last_new_index = 0							
@@ -260,7 +260,7 @@ class TakBoard():
 
 							#Down
 							for move_x in range(x+1, self.board_size):
-								cell_m = self.board[move_x][y]
+								cell_m = self.board[move_x,y]
 								last_new_index = np.argmax(cell_m==0) -1
 								if last_new_index < 0:
 									last_new_index = 0
@@ -282,7 +282,7 @@ class TakBoard():
 							s_distance = 0
 							#Up
 							for move_x in range(x-1, -1, -1):
-								cell_m = self.board[move_x][y]
+								cell_m = self.board[move_x,y]
 								last_new_index = np.argmax(cell_m==0) -1
 								if last_new_index < 0:
 									last_new_index = 0
@@ -304,7 +304,7 @@ class TakBoard():
 							s_distance = 0
 							#Left
 							for move_y in range(y-1, -1, -1):
-								cell_m = self.board[x][move_y]
+								cell_m = self.board[x,move_y]
 								last_new_index = np.argmax(cell_m==0) -1
 								if last_new_index < 0:
 									last_new_index = 0
@@ -326,7 +326,7 @@ class TakBoard():
 							s_distance = 0								
 							#Right
 							for move_y in range(y+1, self.board_size):
-								cell_m = self.board[x][move_y]
+								cell_m = self.board[x,move_y]
 								last_new_index = np.argmax(cell_m==0) -1
 								if last_new_index < 0:
 									last_new_index = 0
@@ -416,7 +416,7 @@ class TakBoard():
 	def place(self, piece, grid_location):
 		x,y = self.get_x_y_from_grid(grid_location)
 		#last_new_index = (self.board[move_x][y]!=0).cumsum().argmax()
-		cell = self.board[y][x]
+		cell = self.board[y,x]
 		if np.count_nonzero(cell) != 0:
 			raise Exception("Invalid Placement Location: gridlocation={}, currentsquare={}".format(grid_location, cell))
 
@@ -483,7 +483,7 @@ class TakBoard():
 
 		count = np.sum(move_array)
 		current_square = start
-		to_check = []
+		to_check = [start]
 
 		#print("Move: s:{}, e:{}".format(start, end))
 
@@ -495,7 +495,7 @@ class TakBoard():
 
 				#Set Start
 				x,y = self.get_x_y_from_grid(start)
-				cell = self.board[y][x]
+				cell = self.board[y,x]
 				last_index = np.argmax(cell==0) -1
 				if last_index < 0:
 					last_index = 0
@@ -515,7 +515,7 @@ class TakBoard():
 						self.check_for_wall_crush(current_square, pop_array)
 
 					x,y = self.get_x_y_from_grid(current_square)
-					cell = self.board[y][x]
+					cell = self.board[y,x]
 					last_index = np.argmax(cell==0) -1
 					if last_index < 0:
 						last_index = 0
@@ -548,7 +548,7 @@ class TakBoard():
 
 				#Set Start
 				x,y = self.get_x_y_from_grid(start)
-				cell = self.board[y][x]
+				cell = self.board[y,x]
 				last_index = np.argmax(cell==0) -1
 				if last_index < 0:
 					last_index = 0
@@ -568,7 +568,7 @@ class TakBoard():
 						self.check_for_wall_crush(current_square, pop_array)
 
 					x,y = self.get_x_y_from_grid(current_square)
-					cell = self.board[y][x]
+					cell = self.board[y,x]
 					last_index = np.argmax(cell==0) -1
 					if last_index < 0:
 						last_index = 0
@@ -604,7 +604,7 @@ class TakBoard():
 				
 				#Set Start
 				x,y = self.get_x_y_from_grid(start)
-				cell = self.board[y][x]
+				cell = self.board[y,x]
 				last_index = np.argmax(cell==0) -1
 				if last_index < 0:
 					last_index = 0
@@ -624,7 +624,7 @@ class TakBoard():
 						self.check_for_wall_crush(current_square, pop_array)
 
 					x,y = self.get_x_y_from_grid(current_square)
-					cell = self.board[y][x]
+					cell = self.board[y,x]
 					last_index = np.argmax(cell==0) -1
 					if last_index < 0:
 						last_index = 0
@@ -658,7 +658,7 @@ class TakBoard():
 				
 				#Set Start
 				x,y = self.get_x_y_from_grid(start)
-				cell = self.board[y][x]
+				cell = self.board[y,x]
 				last_index = np.argmax(cell==0) -1
 				if last_index < 0:
 					last_index = 0
@@ -678,7 +678,7 @@ class TakBoard():
 						self.check_for_wall_crush(current_square, pop_array)
 
 					x,y = self.get_x_y_from_grid(current_square)
-					cell = self.board[y][x]
+					cell = self.board[y,x]
 					last_index = np.argmax(cell==0) -1
 					if last_index < 0:
 						last_index = 0
@@ -709,7 +709,7 @@ class TakBoard():
 		else:
 			raise Exception("Move is not up, down, left, or right")
 
-		self.update_tops()
+		self.update_tops(to_check)
 
 		#Check for win
 		self.winner_move(to_check)
@@ -718,21 +718,22 @@ class TakBoard():
 		self.player1_turn = not self.player1_turn
 		self.move_number +=1
 
-	def update_tops(self):
-		for x,y in np.ndindex(self.board.shape[:2]):
-			cell = self.board[x][y]
+	def update_tops(self, update):
+		for current_square in update:
+			x,y = self.get_x_y_from_grid(current_square)
+			cell = self.board[x,y]
 			last_index = np.argmax(cell==0) -1
 			if last_index < 0:
 				last_index = 0
 			if np.count_nonzero(cell) == 0 or (np.bitwise_and(cell[last_index],6) == 4):
-				self.white_top[x][y] = False
-				self.black_top[x][y] = False
+				self.white_top[x,y] = False
+				self.black_top[x,y] = False
 			elif (np.bitwise_and(cell[last_index],1) == 0):
-				self.white_top[x][y] = True
-				self.black_top[x][y] = False
+				self.white_top[x,y] = True
+				self.black_top[x,y] = False
 			else:
-				self.black_top[x][y] = True
-				self.white_top[x][y] = False
+				self.black_top[x,y] = True
+				self.white_top[x,y] = False
 
 	def check_for_wall_crush(self, current_square, pop_array):
 		#If last move and pops is 1 
@@ -741,7 +742,7 @@ class TakBoard():
 		x,y = self.get_x_y_from_grid(current_square)
 
 		piece = pop_array[0]
-		cell = self.board[y][x]
+		cell = self.board[y,x]
 		last_index = (cell!=0).cumsum().argmax()
 		if not np.count_nonzero(cell) == 0:
 			wall = cell[last_index]
@@ -756,62 +757,6 @@ class TakBoard():
 				cell[last_index] = (int(np.bitwise_and(wall, 1)) +2)
 
 	###Helper Functions
-
-	def generate_move_arrays(self, distance, to_move, cap):
-		to_move +=1
-		ret = []
-
-		if distance >= 1:
-			for x in range(1, to_move):
-				ret.append([x])
-
-
-		if distance >= 2:
-			for x in range(1, to_move-1):
-				for y in range(1, to_move-1):
-					if x+y < to_move and [x,y] not in ret:
-						ret.append([x,y])			
-
-		if distance >= 3:
-			for x in range(1, to_move-2):
-				for y in range(1, to_move-2):
-					for z in range(1, to_move-2):
-						if x+y+z < to_move and [x,y,z] not in ret:
-							ret.append([x,y,z])	
-
-		if distance >= 4:
-			for x in range(1, to_move-3):
-				for y in range(1, to_move-3):
-					for z in range(1, to_move-3):
-						for a in range(1, to_move-3):
-							if x+y+z+a < to_move and [x,y,z,a] not in ret:
-								ret.append([x,y,z,a])	
-
-		if cap:
-			if distance == 0:
-				ret.append([1])
-
-			elif distance == 1:
-				for x in range(1, to_move-1):
-					if x+1 < to_move and [x,1] not in ret:
-						ret.append([x,1])			
-
-			elif distance == 2:
-				for x in range(1, to_move-2):
-					for y in range(1, to_move-2):
-						if x+y+1 < to_move and [x,y,1] not in ret:
-							ret.append([x,y,1])	
-
-			elif distance == 3:
-				for x in range(1, to_move-3):
-					for y in range(1, to_move-3):
-						for z in range(1, to_move-3):
-							if x+y+z+1 < to_move and [x,y,z,1] not in ret:
-								ret.append([x,y,z,1])	
-
-		return ret
-
-
 	def get_index_from_ints(self, x, y):
 		index = chr(ord("E") - y)
 		index += str(x+1)
@@ -868,7 +813,7 @@ class TakBoard():
 			for y, cell in enumerate(row):
 				move_cell = self.get_internal_cell(move_board[x][y])
 				count += len(move_cell)
-				self.board[x][y] = move_cell
+				self.board[x,y] = move_cell
 
 		self.move_number = count
 

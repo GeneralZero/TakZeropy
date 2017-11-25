@@ -451,7 +451,7 @@ class TakBoard():
 
 		count = np.sum(move_array)
 		current_square = start
-		to_check = []
+		to_check = [start]
 
 		#Valid Move
 		if start[0] == end[0]:
@@ -595,7 +595,7 @@ class TakBoard():
 		else:
 			raise Exception("Move is not up, down, left, or right")
 
-		self.update_tops()
+		self.update_tops(to_check)
 
 		#Check for win
 		self.winner_move(to_check)
@@ -604,18 +604,19 @@ class TakBoard():
 		self.player1_turn = not self.player1_turn
 		self.move_number +=1
 
-	def update_tops(self):
-		for x,rows in enumerate(self.board):
-			for y,cells in enumerate(rows):
-				if len(cells) == 0 or cells[-1][0] == "S":
-					self.white_top[x][y] = False
-					self.black_top[x][y] = False
-				elif cells[-1][-1] == "w":
-					self.white_top[x][y] = True
-					self.black_top[x][y] = False
-				elif cells[-1][-1] == "b":
-					self.black_top[x][y] = True
-					self.white_top[x][y] = False
+	def update_tops(self, update):
+		for current_square in update:
+			x,y = self.get_x_y_from_grid(current_square)
+			cell = self.board[x][y]
+			if len(cell) == 0 or cell[-1][0] == "S":
+				self.white_top[x][y] = False
+				self.black_top[x][y] = False
+			elif cell[-1][-1] == "w":
+				self.white_top[x][y] = True
+				self.black_top[x][y] = False
+			elif cell[-1][-1] == "b":
+				self.black_top[x][y] = True
+				self.white_top[x][y] = False
 
 	def check_for_wall_crush(self, current_square, pop_array):
 		#If last move and pops is 1 
