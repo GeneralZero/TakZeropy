@@ -120,11 +120,11 @@ def UCTPlayGame():
 
 	game = TakBoard(5)
 	while (game.white_win == False and game.black_win == False):
-		childNodes, winrate = UCT(rootstate = game, itermax = 1, verbose = verbose) # play with values for itermax and verbose = True
+		childNodes, winrate = UCT(rootstate = game, itermax = 100, verbose = verbose) # play with values for itermax and verbose = True
 		m =  random.choice(childNodes)
-		#win = childNodes[-1].wins
-		#trys = childNodes[-1].visits
-		print("Random Move: {}, Wins: {}, Trys: {}, Prob: {:.6f}".format(m, win, trys, win/trys))
+		#win = m.wins
+		#trys = m.visits
+		#print("Random Move: {}, Wins: {}, Trys: {}, Prob: {:.6f}".format(m.move, win, trys, win/trys))
 
 		np_state = game.board
 		addition = np.full(1576, -1.0, dtype=float)
@@ -166,12 +166,12 @@ def save(training_data):
 if __name__ == "__main__":
 	""" Play a single game to the end using UCT for both players.
 	"""
-	cProfile.run('main()')
+	#cProfile.run('main()')
 
 
-	#pool = multiprocessing.Pool(processes=8)
-	#for x in range(500):
-	#	pool.apply_async(main, callback=save)
-	#pool.close()
-	#pool.join()
+	pool = multiprocessing.Pool(processes=8)
+	for x in range(500):
+		pool.apply_async(main, callback=save)
+	pool.close()
+	pool.join()
 
