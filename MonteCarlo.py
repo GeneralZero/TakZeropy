@@ -3,6 +3,7 @@ import random, h5py, os, multiprocessing
 import numpy as np
 from board import TakBoard
 from datetime import date
+from time import time
 import cProfile
 #np.set_printoptions(threshold=np.nan)
 
@@ -98,8 +99,10 @@ def UCT(rootstate, itermax, verbose = False):
 		Assumes 2 alternating players (player 1 starts), with game results in the range [0.0, 1.0]."""
 
 	rootnode = Node(state = rootstate)
+	itter = itermax * len(rootnode.untriedMoves)
+	print(itter)
 
-	for i in range(itermax * len(rootnode.untriedMoves)):
+	for i in range(itter):
 		node = rootnode
 		state = rootstate.clone()
 
@@ -120,11 +123,12 @@ def UCTPlayGame():
 
 	game = TakBoard(5)
 	while (game.white_win == False and game.black_win == False):
+		start_time = time()
 		childNodes, winrate = UCT(rootstate = game, itermax = 100, verbose = verbose) # play with values for itermax and verbose = True
 		m =  random.choice(childNodes)
-		#win = m.wins
-		#trys = m.visits
-		#print("Random Move: {}, Wins: {}, Trys: {}, Prob: {:.6f}".format(m.move, win, trys, win/trys))
+		win = m.wins
+		trys = m.visits
+		print("Random Move: {}, Wins: {}, Trys: {}, Prob: {:.6f}, took {:.6f}s".format(m.move, win, trys, win/trys, time() - start_time), flush=True)
 
 		np_state = game.board
 		addition = np.full(1576, -1.0, dtype=float)
@@ -138,24 +142,20 @@ def UCTPlayGame():
 		game.exec_move(m.move)
 
 	if game.white_win == True:
-		print("White Player wins!")
+		print("White Player wins!", flush=True)
 	elif game.black_win == True:
-		print("Black Player wins!")
+		print("Black Player wins!", flush=True)
 	else:
-		print("Nobody wins!")
+		print("Nobody wins!", flush=True)
 
 	return train_data
-
-def main():
-	return UCTPlayGame()
-
 
 def save(training_data):
 	#print(training_data)
 	global game_index
 	with h5py.File(os.path.join(os.getcwd(), "games", "Game_{}_{}".format(game_index, date.today())), 'w') as hf:
-		print("Saving Game{}".format(game_index))
-		print("Game has {} moves".format(len(training_data)))
+		print("Saving Game{}".format(game_index), flush=True)
+		print("Game has {} moves".format(len(training_data)), flush=True)
 		for index, gamedata in enumerate(training_data):
 			hf.create_dataset("state_{}".format(index), data=gamedata["state"], compression="gzip", compression_opts=9)
 			hf.create_dataset("probs_{}".format(index), data=gamedata["probs"], compression="gzip", compression_opts=9)
@@ -167,11 +167,11 @@ if __name__ == "__main__":
 	""" Play a single game to the end using UCT for both players.
 	"""
 	#cProfile.run('main()')
+	save(UCTPlayGame())
 
 
-	pool = multiprocessing.Pool(processes=8)
-	for x in range(500):
-		pool.apply_async(main, callback=save)
-	pool.close()
-	pool.join()
-
+	#pool = multiprocessing.Pool(processes=4)
+	#for x in range(500):
+	#	pool.apply_async(UCTPlayGame, callback=save)
+	#pool.close()
+	#pool.join()
