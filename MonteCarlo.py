@@ -3,6 +3,7 @@ import random, h5py, os, multiprocessing
 import numpy as np
 from board import TakBoard
 from datetime import date
+import cProfile
 #np.set_printoptions(threshold=np.nan)
 
 game_index = 0
@@ -119,13 +120,13 @@ def UCTPlayGame():
 
 	game = TakBoard(5)
 	while (game.white_win == False and game.black_win == False):
-		childNodes, winrate = UCT(rootstate = game, itermax = 100, verbose = verbose) # play with values for itermax and verbose = True
+		childNodes, winrate = UCT(rootstate = game, itermax = 1, verbose = verbose) # play with values for itermax and verbose = True
 		m =  random.choice(childNodes)
 		#win = childNodes[-1].wins
 		#trys = childNodes[-1].visits
-		#print("Random Move: {}, Wins: {}, Trys: {}, Prob: {:.6f}".format(m, win, trys, win/trys))
+		print("Random Move: {}, Wins: {}, Trys: {}, Prob: {:.6f}".format(m, win, trys, win/trys))
 
-		np_state = game.get_numpy_board()
+		np_state = game.board
 		addition = np.full(1576, -1.0, dtype=float)
 		for moves in childNodes:
 			addition[moves.move["index"]] = moves.wins/moves.visits
@@ -165,10 +166,12 @@ def save(training_data):
 if __name__ == "__main__":
 	""" Play a single game to the end using UCT for both players.
 	"""
-	#main()
-	pool = multiprocessing.Pool(processes=4)
-	for x in range(500):
-		pool.apply_async(main, callback=save)
-	pool.close()
-	pool.join()
+	cProfile.run('main()')
+
+
+	#pool = multiprocessing.Pool(processes=8)
+	#for x in range(500):
+	#	pool.apply_async(main, callback=save)
+	#pool.close()
+	#pool.join()
 
