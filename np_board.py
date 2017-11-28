@@ -718,6 +718,7 @@ class TakBoard():
 		self.player1_turn = not self.player1_turn
 		self.move_number +=1
 
+		
 	def update_tops(self, update):
 		for current_square in update:
 			x,y = self.get_x_y_from_grid(current_square)

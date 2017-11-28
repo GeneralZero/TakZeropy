@@ -112,9 +112,9 @@ def UCT(rootstate, itermax, verbose = False):
 	if (verbose):
 		print(rootnode.TreeToString(0))
 
-	return sorted(rootnode.childNodes, key = lambda c: c.visits), rootnode.visits
+	return sorted(rootnode.childNodes, key = lambda c: c.visits), rootnode.wins/rootnode.visits
 
-def UCTPlayGame(game_index, ittermult=100):
+def UCTPlayGame(ittermult=100):
 	""" Play a sample game between two UCT players where each player gets a different number
 		of UCT iterations (= simulations = tree nodes).
 	"""
@@ -128,12 +128,12 @@ def UCTPlayGame(game_index, ittermult=100):
 		m =  random.choice(childNodes)
 		win = m.wins
 		trys = m.visits
-		print("Random Move: {}, Trys: {}, took {:.6f}s".format(m.move, trys, time() - start_time), flush=True)
+		print("Random Move: {}, Wins: {}, Trys: {}, Prob: {:.6f}, took {:.6f}s".format(m.move, win, trys, win/trys, time() - start_time), flush=True)
 
 		np_state = game.get_numpy_board()
-		addition = np.full(1576, 0, dtype=int)
+		addition = np.full(1576, -1.0, dtype=float)
 		for moves in childNodes:
-			addition[moves.move["index"]] = moves.visits
+			addition[moves.move["index"]] = moves.wins/moves.visits
 		addition[1575] = winrate
 		#print(winrate)
 
@@ -141,50 +141,32 @@ def UCTPlayGame(game_index, ittermult=100):
 
 		game.exec_move(m.move)
 
-	'''
-	#for x in game.board:
-		print(x)
-	for x in game.white_top:
-		print(x)
-	for x in game.black_top:
-		print(x)
-	print("White Stones left: {}".format(game.white_piece_count))
-	print("Black Stones left: {}".format(game.black_piece_count))
-	'''
 	if game.white_win == True:
 		print("White Player wins!", flush=True)
-		train_data.append(True)
 	elif game.black_win == True:
 		print("Black Player wins!", flush=True)
-		train_data.append(False)
 	else:
 		print("Nobody wins!", flush=True)
 
-	return [train_data, game_index]
+	return train_data
 
 def save(training_data):
 	#print(training_data)
-	game_index = training_data[1]
-	training_data = training_data[0]
-
-	winner = training_data[-1]
-	training_data = training_data[:-1]
-
-	with h5py.File(os.path.join(os.getcwd(), "games", "Game_{}_{}.hdf5".format(game_index, date.today())), 'w') as hf:
+	global game_index
+	with h5py.File(os.path.join(os.getcwd(), "games_100", "Game_{}_{}".format(game_index, date.today())), 'w') as hf:
 		print("Saving Game{}".format(game_index), flush=True)
 		print("Game has {} moves".format(len(training_data)), flush=True)
 		for index, gamedata in enumerate(training_data):
 			hf.create_dataset("state_{}".format(index), data=gamedata["state"], compression="gzip", compression_opts=9)
 			hf.create_dataset("probs_{}".format(index), data=gamedata["probs"], compression="gzip", compression_opts=9)
 
-		hf.create_dataset("white_win", data=np.array([winner]), compression="gzip", compression_opts=9)
+	game_index += 1
+
 
 if __name__ == "__main__":
-	game_index = 0
-	#save(UCTPlayGame(game_index, 1))
 	pool = multiprocessing.Pool(processes=7)
 	for x in range(500):
-		pool.apply_async(UCTPlayGame, args=(game_index,1,), callback=save)
-		game_index += 1
+		#save(UCTPlayGame())
+		pool.apply_async(UCTPlayGame, args=(100,), callback=save)
 	pool.close()
 	pool.join()

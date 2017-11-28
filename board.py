@@ -27,7 +27,7 @@ class TakBoard():
 		self.white_piece_count = 21
 		self.board = [[[] for x in range(self.board_size)] for x in range(self.board_size)]
 
-		self.encode = {"w": 2, "b": 3, "sw": 4, "sb": 5, "cw": 6, "cb": 7}
+		self.encode = {"w": 2, "b": 3, "Sw": 4, "Sb": 5, "Cw": 6, "Cb": 7}
 
 		self.white_top = [[False for x in range(self.board_size)] for x in range(self.board_size)]
 		self.black_top = [[False for x in range(self.board_size)] for x in range(self.board_size)]
@@ -67,6 +67,7 @@ class TakBoard():
 			self.place(move_obj["piece"], move_obj["placement"])
 		else:
 			raise ValueError("Invalid movetype")
+
 
 	def get_play_index(self, play_obj):
 		if play_obj["movetype"] == "p":
@@ -141,19 +142,7 @@ class TakBoard():
 			##Add placements
 			for x,rows in enumerate(self.board):
 				for y,cells in enumerate(rows):
-					if len(cells) == 0:
-						temp_move = {"movetype": "p", "piece":"", "placement":self.get_index_from_ints(self.board_size - x -1, self.board_size - y -1)}
-						temp_move["index"] = self.get_play_index(temp_move)
-						play_array.append(temp_move)
-
-						temp_move1 = {"movetype": "p", "piece":"S", "placement": temp_move["placement"], "index": temp_move["index"] + 1}
-						play_array.append(temp_move1)
-						
-						if (self.player1_turn == True and self.capstone_player1 == True) or (self.player1_turn == False and self.capstone_player2 == True):
-							temp_move2 = {"movetype": "p", "piece":"C", "placement": temp_move1["placement"], "index": temp_move1["index"] + 1}
-							play_array.append(temp_move2)
-
-					else:
+					if len(cells) != 0:
 						##Add moves
 						cap = cells[-1][0] == "C"
 						start_index = self.get_index_from_ints(self.board_size - x -1, self.board_size - y -1)
@@ -311,6 +300,23 @@ class TakBoard():
 									temp_move = {"movetype": "m", "start":start_index, "end":self.get_index_from_ints(self.board_size - x -1, self.board_size - y -1-len(move)), "order": move, "direction": "right"}
 									temp_move["index"] = self.get_play_index(temp_move)
 									play_array.append(temp_move)
+				
+					else:
+						temp_move = {"movetype": "p", "piece":"", "placement":self.get_index_from_ints(self.board_size - x -1, self.board_size - y -1)}
+						temp_move["index"] = self.get_play_index(temp_move)
+
+						temp_move1 = {"movetype": "p", "piece":"S", "placement": temp_move["placement"], "index": temp_move["index"] + 1}
+
+						if (self.player1_turn == True and self.capstone_player1 == True) or (self.player1_turn == False and self.capstone_player2 == True):
+							if (self.player1_turn == True and self.white_piece_count == 0) or (self.player1_turn == False and self.black_piece_count == 0):
+								temp_move["piece"] = "C"
+								play_array.append(temp_move)
+								continue
+							temp_move2 = {"movetype": "p", "piece":"C", "placement": temp_move1["placement"], "index": temp_move1["index"] + 1}
+							play_array.append(temp_move2)
+
+						play_array.append(temp_move)
+						play_array.append(temp_move1)
 
 		return play_array
 
@@ -379,6 +385,32 @@ class TakBoard():
 
 		self.player1_turn = not self.player1_turn
 
+	def winner_all(self):
+		#Check Road
+		all_array = []
+		for x in range(self.board_size):
+			for y in range(self.board_size):
+				all_array.append(chr(ord("A") + x) + str(y+1))
+
+		self.winner_move(all_array)
+
+		black_count = 0
+		white_count = 0
+
+		#Check Out of stones
+		for row in self.board:
+			for cell in row:
+				for piece in cell:
+					if "w" in piece:
+						white_count +=1
+					if "b" in piece:
+						black_count +=1
+
+		if white_count >= self.white_piece_count:
+			self.black_win = True
+		if black_count >= self.black_piece_count:
+			self.white_win = True
+
 	###Game Functions
 
 	def place(self, piece, grid_location):
@@ -398,10 +430,10 @@ class TakBoard():
 		if piece == None or piece == "":
 			place_peice = color
 
-		elif piece.lower() == "w" or piece.lower() == "s":
+		elif piece == "W" or piece == "S":
 			place_peice = "S"+ color
 
-		elif piece.lower() == "c":
+		elif piece == "C":
 			place_peice = "C"+ color
 			if self.player1_turn == True:
 				self.capstone_player1 = False
@@ -425,16 +457,16 @@ class TakBoard():
 			#Check Winner
 			self.winner_place(place_peice, grid_location)
 
-		if piece.lower() != 'C':
+		if piece != 'C':
 			if color == "w":
 				self.white_piece_count -= 1
-				if self.white_piece_count == 0:
+				if self.white_piece_count == -1:
 					self.black_win = True
 					return
 
 			else:
 				self.black_piece_count -= 1
-				if self.black_piece_count == 0:
+				if self.black_piece_count == -1:
 					self.white_win = True
 					return
 		#Change turn
@@ -618,6 +650,20 @@ class TakBoard():
 				self.black_top[x][y] = True
 				self.white_top[x][y] = False
 
+	def update_all_tops(self):
+		for x,rows in enumerate(self.board):
+			for y,cells in enumerate(rows):
+				if len(cells) == 0 or cells[-1][0] == "S":
+					self.white_top[x][y] = False
+					self.black_top[x][y] = False
+				elif cells[-1][-1] == "w":
+					self.white_top[x][y] = True
+					self.black_top[x][y] = False
+				elif cells[-1][-1] == "b":
+					self.black_top[x][y] = True
+					self.white_top[x][y] = False
+
+
 	def check_for_wall_crush(self, current_square, pop_array):
 		#If last move and pops is 1 
 		#Check if has capstone in peice
@@ -628,7 +674,7 @@ class TakBoard():
 			wall = self.get_square(current_square)[-1]
 		else:
 			return
-		if piece[0].lower() == 'c' and wall != None and wall[0].lower() == 's':
+		if piece[0] == 'C' and wall != None and wall[0] == 'S':
 			#print("Capstone wall crush")
 			square = self.get_square(current_square)
 
@@ -649,13 +695,6 @@ class TakBoard():
 	def get_index_from_ints(self, x, y):
 		index = chr(ord("E") - y)
 		index += str(x+1)
-		return index
-
-	def get_index_from_int(self, z):
-		y = z // self.board_size
-		x = z % self.board_size
-		index = chr(ord("A") + y)
-		index += str(self.board_size - x)
 		return index
 
 	def set_square(self, grid_location, peices):
@@ -692,25 +731,6 @@ class TakBoard():
 		return [x,y]
 
 	###Deep Learning Functions
-
-	def get_numpy_board(self):
-		board_array=[]
-		
-		for row_index, rows in enumerate(self.board):
-			row_array = []
-			for col_index, cols in enumerate(rows):
-				cell = []
-				for height in cols:
-					cell.append(self.encode[height.lower()])
-
-				#Top is lowest index
-				cell = cell[::-1]
-				cell = np.pad(np.array(cell, dtype=np.dtype('B')), (0, self.max_height - len(cell)), 'constant')
-				row_array.append(cell)
-			board_array.append(row_array)
-
-		return np.array(board_array)
-
 	def set_np_game_board(self, move_board, player1_turn):
 		self.player1_turn = player1_turn
 		count = 0
@@ -722,6 +742,30 @@ class TakBoard():
 				self.board[x][y] = move_cell
 
 		self.move_number = count
+
+		#reset tops
+		self.update_all_tops()
+		#reset counts
+		self.winner_all()
+
+
+	def get_numpy_board(self):
+		board_array=[]
+		
+		for row_index, rows in enumerate(self.board):
+			row_array = []
+			for col_index, cols in enumerate(rows):
+				cell = []
+				for height in cols:
+					cell.append(self.encode[height])
+
+				#Top is lowest index
+				cell = cell[::-1]
+				cell = np.pad(np.array(cell, dtype=np.dtype('B')), (0, self.max_height - len(cell)), 'constant')
+				row_array.append(cell)
+			board_array.append(np.array(row_array))
+
+		return np.array(board_array)
 
 	def pack_move(self, move):
 		out = [0,0,0,0,0,0,0,0,0,0,0,0]
@@ -761,107 +805,6 @@ class TakBoard():
 			raise Exception("Invalid Move Type Result")
 
 		return out
-
-	def get_result_from_new_board(self, move_board):
-		move = self.get_move_from_new_board(move_board)
-
-		return self.pack_move(move)
-
-	def get_direction_from_start_end(self, start, end):
-		size = 5
-
-		#direction lowest is bottom left
-		start_int = size * int(start[1:]) + (ord('a') - ord(start[0].lower()))
-		end_int = size * int(end[1:]) + (ord('a') - ord(end[0].lower())) 
-
-		if start_int > end_int:
-			# Move Down or Left
-			if end_int > start_int - size:
-				#Move Down
-				return 3
-			else:
-				#Move Left
-				return 4
-		else:
-			#Move Up or Right
-			if end_int >= start_int + size:
-				#Move Up
-				return 1
-			else:
-				#Move Right
-				return 2
-
-	def get_move_from_new_board(self, move_board):
-		changes = []
-		#Get Rows
-		for x, row in enumerate(self.board):
-			for y, cell in enumerate(row):
-				#Convert cell to be compared
-				move_cell = self.get_internal_cell(move_board[x][y])
-
-
-
-				if len(cell) == len(move_cell):
-					if cell != move_cell:
-						#print("Change in the elements at the index x:{}, y:{}".format(x, y))
-						#print("MoveCell: {}".format(move_cell))
-						#print("Cell: {}".format(cell))
-						changes.append({'x':x,'y':y, "move_cell": move_cell, "cell": cell, "index": self.get_index_from_ints(x,y), "diff": len(cell) - len(move_cell)})
-				else:
-					#print("Change in number of elements at index x:{}, y:{}".format(x, y))
-					#print("MoveCell: {}".format(move_cell))
-					#print("Cell: {}".format(cell))
-					changes.append({'x':x,'y':y, "move_cell": move_cell, "cell": cell, "index": self.get_index_from_ints(x,y), "diff": len(cell) - len(move_cell)})
-		
-		#Place 
-		#print(changes)
-		if len(changes) == 1:
-			change = changes[0]
-
-			if len(change["move_cell"]) == 1:
-				#print("[Place] {} {}".format("", change["index"]))
-				self.place("", change["index"])
-
-			else:
-				#print("[Place] {} {}".format(change["move_cell"][0], change["index"]))
-				self.place(change["move_cell"][0], change["index"])
-
-			return {"movetype": "p", "piece": change["move_cell"][0], "placement":change["index"]}
-
-			
-		else:
-			#Move
-			movement_array = [row for row in changes]
-
-			start = ""
-			end = ""
-
-			reverse = False
-
-			for index, change in enumerate(changes):
-				if change["diff"] > 0:
-					#print("Start is " + change["index"])
-
-					start = change["index"]
-					movement_array.pop(index)
-
-					if index == 0:
-						movement_array = movement_array[::-1] 
-						end = changes[-1]["index"]
-					else:
-						end = changes[0]["index"]
-						#print(changes[0])
-					break
-
-			count_array = []
-			for elem in movement_array:
-				count_array.append(abs(elem["diff"]))
-
-			
-			#print("[Move]  Start: {}, End: {}, Array: {}".format(start, end, count_array))
-			self.move(start, end, count_array)
-
-			return {"movetype": "m", "start": start, "end": end, "order": count_array}
 
 
 
@@ -908,9 +851,6 @@ def game2():
 	p.move("D3", "E3", [1])
 	p.place("", "A2")
 	p.move("E3", "E1", [1, 2])
-	test = p.get_numpy_board()
-	#print(test.shape)
-	
 	p.place("", "A3")
 	p.place("", "A1")
 	p.move("A2", "B2", [1])
@@ -923,6 +863,13 @@ def game2():
 	p.place("", "B1")
 	p.place("W", "C1")
 	p.move("E1", "C1", [2, 1])
+
+	for x in p.board:
+		print(x)
+	test = p.get_numpy_board()
+	p.set_np_game_board(test, True)
+	for x in p.board:
+		print(x)
 
 
 if __name__ == '__main__':
