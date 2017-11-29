@@ -16,6 +16,8 @@ class UCTTakGame():
 		self.rootnode = UCTNode(state = self.game)
 		self.childNodes = None
 
+		print("Start")
+
 	def main(self):
 		train_data = []
 		
@@ -124,9 +126,10 @@ def save(training_data):
 if __name__ == "__main__":
 	#p = UCTTakGame(1)
 	#save(p.main())
-	pool = multiprocessing.Pool(processes=1)
+	#pool = multiprocessing.Pool(processes=7)
 	for x in range(50000):
-		p = UCTTakGame(1)
-		pool.apply_async(p.main(), callback=save)
-	pool.close()
-	pool.join()
+		p = UCTTakGame(10)
+		save(p.main())
+	#	pool.apply_async(p.main(), callback=save)
+	#pool.close()
+	#pool.join()
