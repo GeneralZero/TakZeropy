@@ -55,7 +55,7 @@ class UCTNode:
 	def TreeToString(self, indent):
 		s = self.IndentString(indent) + str(self)
 		for c in self.childNodes:
-			 s += c.TreeToString(indent+1)
+			s += c.TreeToString(indent+1)
 		return s
 
 	def IndentString(self,indent):
@@ -67,5 +67,5 @@ class UCTNode:
 	def ChildrenToString(self):
 		s = ""
 		for c in self.childNodes:
-			 s += str(c) + "\n"
+			s += str(c) + "\n"
 		return s

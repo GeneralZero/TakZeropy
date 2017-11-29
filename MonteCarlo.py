@@ -16,8 +16,6 @@ class UCTTakGame():
 		self.rootnode = UCTNode(state = self.game)
 		self.childNodes = None
 
-		self.main()
-
 	def main(self):
 		train_data = []
 		
@@ -41,10 +39,10 @@ class UCTTakGame():
 			self.change_root_node(m)
 
 
-		if game.white_win == True:
+		if self.game.white_win == True:
 			print("White Player wins!", flush=True)
 			train_data.append(True)
-		elif game.black_win == True:
+		elif self.game.black_win == True:
 			print("Black Player wins!", flush=True)
 			train_data.append(False)
 		else:
@@ -69,9 +67,7 @@ class UCTTakGame():
 		for i in range(itter):
 			self.rollout(self.game.clone(), self.rootnode)
 
-
-		print(self.rootnode.childNodes[0].visits, self.rootnode.visits)
-
+		#print(self.rootnode.childNodes[0].visits, self.rootnode.visits)
 		return sorted(self.rootnode.childNodes, key = lambda c: (c.visits, c.wins))
 
 	def rollout(self, state, node):
@@ -117,8 +113,7 @@ def save(training_data):
 	winner = training_data[-1]
 	training_data = training_data[:-1]
 
-	with h5py.File(os.path.join(os.getcwd(), "random_10", "Game_{}.hdf5".format(hashlib.md5(repr(training_data).encode('utf-8')).hexdigest())), 'w') as hf:
-		print("Saving Game{}".format(game_index), flush=True)
+	with h5py.File(os.path.join(os.getcwd(), "best_10", "Game_{}.hdf5".format(hashlib.md5(repr(training_data).encode('utf-8')).hexdigest())), 'w') as hf:
 		print("Game has {} moves".format(len(training_data)), flush=True)
 		for index, gamedata in enumerate(training_data):
 			hf.create_dataset("state_{}".format(index), data=gamedata["state"], compression="gzip", compression_opts=9)
@@ -127,9 +122,11 @@ def save(training_data):
 		hf.create_dataset("white_win", data=np.array([winner]), compression="gzip", compression_opts=9)
 
 if __name__ == "__main__":
-	UCTTakGame(10)
-	#pool = multiprocessing.Pool(processes=7)
-	#for x in range(50000):
-	#	pool.apply_async(UCTTakGame, args=(1,), callback=save)
-	#pool.close()
-	#pool.join()
+	#p = UCTTakGame(1)
+	#save(p.main())
+	pool = multiprocessing.Pool(processes=1)
+	for x in range(50000):
+		p = UCTTakGame(1)
+		pool.apply_async(p.main(), callback=save)
+	pool.close()
+	pool.join()
