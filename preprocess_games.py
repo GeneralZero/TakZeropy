@@ -351,12 +351,17 @@ def open_game_file(filename, folder):
 				gamedata.append(np.array(build))
 				probdata.append(new_probs[rotate])
 
-	return gamedata, probdata
+	return gamedata, probdata, winner
 
 
-def save_game_file(gamedata, probdata, game_file, folder):
+def save_game_file(gamedata, probdata, winner, game_file, folder):
 	#Save moves, probs with all rotations
-	with h5py.File(os.path.join(os.getcwd(), folder, "out", game_file[:-5] + "_done.h5py"), 'w') as hf:
+	sub_folder = ""
+	if winner:
+		sub_folder = "white"
+	else:
+		sub_folder = "black"
+	with h5py.File(os.path.join(os.getcwd(), folder, sub_folder, game_file[:-5] + "_done.h5py"), 'w') as hf:
 		hf.create_dataset("x_train", data=gamedata, compression="gzip", compression_opts=9)
 		hf.create_dataset("y_train", data=probdata, compression="gzip", compression_opts=9)
 	
@@ -365,5 +370,5 @@ if __name__ == '__main__':
 	folder = "games"
 	game_files = [filename for filename in os.listdir(os.path.join(os.getcwd(), folder)) if os.path.isfile(os.path.join(os.getcwd(), folder, filename))]
 	for game_file in game_files:
-		gamedata, probdata = open_game_file(game_file, folder)
-		save_game_file(gamedata, probdata, game_file, folder)
+		gamedata, probdata, winner = open_game_file(game_file, folder)
+		save_game_file(gamedata, probdata, winner, game_file, folder)
