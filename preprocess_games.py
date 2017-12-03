@@ -287,6 +287,7 @@ def open_game_file(filename, folder):
 
 	gamedata = []
 	probdata = []
+	windata = []
 
 	with h5py.File(os.path.join(os.getcwd(), folder, filename), 'r') as hf:
 		count = (len(hf)-1)//2
@@ -300,7 +301,7 @@ def open_game_file(filename, folder):
 			probs = hf["probs_{}".format(index)][:]
 
 			prev_board = [[np.full((board_size,board_size,64), 0, dtype="B") for y in range(save_n_moves)] for x in range(8)]
-			new_probs = [np.full(1575, 0, dtype=int) for x in range(8)]
+			new_probs = [np.full(1575, -1.0, dtype=float) for x in range(8)]
 
 			#Mirror the game
 			for rotate in range(8):
@@ -334,7 +335,7 @@ def open_game_file(filename, folder):
 						new_move["direction"] = transform_directon(old_move["direction"], rotate)
 
 						new_idx = get_play_index(new_move)
-						new_probs[rotate][new_idx] = probs[idx]
+						new_probs[rotate][new_idx] = probs[idx] / probs[1575]
 
 				prev_board[rotate][index%save_n_moves] = new_state
 
@@ -349,26 +350,49 @@ def open_game_file(filename, folder):
 					build.append(np.full((board_size,board_size,64), 1, dtype="B"))
 
 				gamedata.append(np.array(build))
-				probdata.append(new_probs[rotate])
+				probdata.append(np.array(new_probs[rotate]))
+				windata.append(winner)
 
-	return gamedata, probdata, winner
+	return np.array(gamedata), np.array(probdata), np.array(windata)
 
 
-def save_game_file(gamedata, probdata, winner, game_file, folder):
+def save_game_file(gamedata, probdata, winner, folder, idx):
 	#Save moves, probs with all rotations
-	sub_folder = ""
-	if winner:
-		sub_folder = "white"
-	else:
-		sub_folder = "black"
-	with h5py.File(os.path.join(os.getcwd(), folder, sub_folder, game_file[:-5] + "_done.h5py"), 'w') as hf:
+	with h5py.File(os.path.join(os.getcwd(), folder, "train_file_{}.hdf5".format(idx)), 'w') as hf:
+		print("gamedata", type(gamedata), gamedata.shape)
+		print("probdata", type(probdata), probdata.shape)
+		print("winner", type(winner), winner.shape)
 		hf.create_dataset("x_train", data=gamedata, compression="gzip", compression_opts=9)
 		hf.create_dataset("y_train", data=probdata, compression="gzip", compression_opts=9)
+		hf.create_dataset("winner", data=winner, compression="gzip", compression_opts=9)
 	
 
 if __name__ == '__main__':
-	folder = "games"
-	game_files = [filename for filename in os.listdir(os.path.join(os.getcwd(), folder)) if os.path.isfile(os.path.join(os.getcwd(), folder, filename))]
-	for game_file in game_files:
+	all_game_data = []
+	all_prob_data = []
+	all_winner_data = []
+	idx = 0
+
+	folder = "best_10"
+	game_files = [filename for filename in os.listdir(os.path.join(os.getcwd(), folder)) if filename.startswith("Game_")]
+	for count, game_file in enumerate(game_files):
 		gamedata, probdata, winner = open_game_file(game_file, folder)
-		save_game_file(gamedata, probdata, winner, game_file, folder)
+
+		if count % 501 == 500:
+			print("Finished Game {}".format(count))
+			save_game_file(all_game_data, all_prob_data, all_winner_data, folder, idx)
+			all_game_data = gamedata
+			all_prob_data = probdata
+			all_winner_data = winner
+			idx +=1
+		
+		elif all_game_data == []:
+			all_game_data = gamedata
+			all_prob_data = probdata
+			all_winner_data = winner
+		else:
+			all_game_data = np.vstack([all_game_data,gamedata])
+			all_prob_data = np.vstack([all_prob_data,probdata])
+			all_winner_data = np.concatenate([all_winner_data,winner])
+		
+	save_game_file(all_game_data, all_prob_data, all_winner_data, folder, idx)
