@@ -90,18 +90,21 @@ class TakZeroNetwork():
 			f.write(self.model.to_json())
 
 		#Check for new network
-		r = requests.get("https://zero.generalzero.org/newest_network")
-		if r.status_code == 200:
-			new_net = r.text
-			self.network = new_net
+		try:
+			r = requests.get("https://zero.generalzero.org/newest_network")
+			if r.status_code == 200:
+				new_net = r.text
+				self.network = new_net
 
-			#Download new network
-			if not os.path.exists(os.path.join(os.getcwd(), self.weights_save, new_net)):
-				r = requests.get("https://zero.generalzero.org/networks/{}".format(new_net), stream=True)
-				with open(new_net, 'wb') as fd:
-					for chunk in r.iter_content(chunk_size=128):
-						fd.write(chunk)
-		else:
+				#Download new network
+				if not os.path.exists(os.path.join(os.getcwd(), self.weights_save, new_net)):
+					r = requests.get("https://zero.generalzero.org/networks/{}".format(new_net), stream=True)
+					with open(new_net, 'wb') as fd:
+						for chunk in r.iter_content(chunk_size=128):
+							fd.write(chunk)
+			else:
+				raise Error("Could not contact Server")
+		except:
 			#Setup Model
 			if os.path.exists(os.path.join(os.getcwd(), self.weights_save, "best.hdf5")):
 				print("Loading previous weights file best.hd5f")
