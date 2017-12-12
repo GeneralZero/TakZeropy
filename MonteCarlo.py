@@ -26,7 +26,7 @@ class UCTTakGame():
 			self.childNodes = self.search()
 
 			m =  self.choose_move()
-			print("Random Move: {}, Trys: {}, took {:.6f}s".format(m.move, m.visits, time() - start_time), flush=True)
+			print("Best Move: {}, Trys: {}, took {:.6f}s".format(m.move, m.visits, time() - start_time), flush=True)
 
 			np_state = self.game.get_numpy_board()
 			addition = np.full(1575, -1, dtype=int)
