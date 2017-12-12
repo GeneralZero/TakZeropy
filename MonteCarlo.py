@@ -132,11 +132,14 @@ def save(training_data, network):
 		hf.create_dataset("white_win", data=np.array([winner]), compression="gzip", compression_opts=9)
 
 	#Upload Game to server
-	r = requests.post("https://zero.generalzero.org/submit_game", files={"game": open(os.path.join(os.getcwd(), network, "Game_{}.hdf5".format(name)), 'rb'), "network": network})
-	if r.status_code == 200:
-		print("Game saved to Server")
-	else:
-		print(r.status_code, r.text)
+	try:
+		r = requests.post("https://zero.generalzero.org/submit_game", files={"game": open(os.path.join(os.getcwd(), network, "Game_{}.hdf5".format(name)), 'rb'), "network": network})
+		if r.status_code == 200:
+			print("Game saved to Server")
+		else:
+			print(r.status_code, r.text)
+	except:
+		print("Error uploading to server")
 
 
 if __name__ == "__main__":
