@@ -100,9 +100,12 @@ class TakZeroNetwork():
 				if not os.path.exists(os.path.join(os.getcwd(), self.weights_save, new_net)):
 					print("Downloading new network " + new_net)
 					r = requests.get("https://zero.generalzero.org/networks/{}".format(new_net), stream=True)
-					with open(new_net, 'wb') as fd:
+					with open(os.path.join(os.getcwd(), self.weights_save, new_net), 'wb') as fd:
 						for chunk in r.iter_content(chunk_size=128):
 							fd.write(chunk)
+
+					#load new network
+					self.model.load_weights(os.path.join(os.getcwd(), self.weights_save, new_net))
 			else:
 				raise Error("Could not contact Server")
 		except:
