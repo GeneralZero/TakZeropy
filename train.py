@@ -98,6 +98,7 @@ class TakZeroNetwork():
 
 				#Download new network
 				if not os.path.exists(os.path.join(os.getcwd(), self.weights_save, new_net)):
+					print("Downloading new network " + new_net)
 					r = requests.get("https://zero.generalzero.org/networks/{}".format(new_net), stream=True)
 					with open(new_net, 'wb') as fd:
 						for chunk in r.iter_content(chunk_size=128):
