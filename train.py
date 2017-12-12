@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import keras, os, random, h5py
+import keras, os, random, h5py, requests
 import numpy as np
 from keras.models import Model
 from keras.layers import Input, Dense, Conv3D, BatchNormalization, Activation, Flatten
@@ -21,19 +21,20 @@ class TakZeroNetwork():
 		self.kernel_level_1 = 3
 		self.kernel_level_2 = 1
 
-		self.features_1 = 64
+		self.features_1 = 256
 		self.features_2 = 12
 		self.features_3 = 1
 
 		self.policy_output_size = 1575
 		self.value_output_size = 1
 
-		self.residual_blocks=5
+		self.residual_blocks=10
 		self.weights_save = "zero_{}".format(self.residual_blocks)
+		self.network = None
 		self.model = None
-		self.number_of_samples = 100
-		self.train_batch_size = 500
-		self.validate_batch_size = 75
+		self.number_of_samples = 64
+		self.train_batch_size = 64
+		self.validate_batch_size = 32
 		self.epochs = 10
 
 		self.opt = keras.optimizers.Nadam(lr=0.01, beta_1=0.9, beta_2=0.999, epsilon=1e-08, schedule_decay=0.004)
@@ -41,23 +42,23 @@ class TakZeroNetwork():
 	def generate_network(self):
 		#Add Convlutional Block
 		y = Dense(15)(self.input_layer)
-		y = Conv3D(self.features_1, self.kernel_level_1, padding='same', data_format='channels_last')(y)
+		y = Conv3D(self.features_1, self.kernel_level_1, padding='same', data_format='channels_first')(y)
 		y = BatchNormalization()(y)
 		activation = Activation('relu')(y)
 
 		#Add Residue Blocks
 		for i in range(self.residual_blocks):
-			y = Conv3D(self.features_1, self.kernel_level_1, padding='same')(activation)
+			y = Conv3D(self.features_1, self.kernel_level_1, padding='same', data_format='channels_first')(activation)
 			y = BatchNormalization()(y)
 			y = Activation('relu')(y)
-			y = Conv3D(self.features_1, self.kernel_level_1, padding='same')(y)
+			y = Conv3D(self.features_1, self.kernel_level_1, padding='same', data_format='channels_first')(y)
 			y = BatchNormalization()(y)
 			y = keras.layers.add([activation, y])
 			activation = Activation('relu')(y)
 
 		#Add Policy Head
 		#Probabilities for the move indexs
-		y = Conv3D(self.features_2, self.kernel_level_2, padding='same')(activation)
+		y = Conv3D(self.features_2, self.kernel_level_2, padding='same', data_format='channels_first')(activation)
 		y = BatchNormalization()(y)
 		y = Activation('relu')(y)
 		y = Flatten()(y)
@@ -65,7 +66,7 @@ class TakZeroNetwork():
 
 		#Add Value Head
 		#This is who won the game
-		y = Conv3D(self.features_3, self.kernel_level_2, padding='same')(activation)
+		y = Conv3D(self.features_3, self.kernel_level_2, padding='same', data_format='channels_first')(activation)
 		y = BatchNormalization()(y)
 		y = Activation('relu')(y)
 		y = Dense(self.features_1)(y)
@@ -78,7 +79,7 @@ class TakZeroNetwork():
 		
 		self.load_weights()
 		self.model.compile(loss='mean_squared_error', optimizer=self.opt, metrics=['accuracy'])
-		self.model.summary()
+		#self.model.summary()
 
 	def load_weights(self):
 		if not os.path.exists(self.weights_save):
@@ -88,24 +89,52 @@ class TakZeroNetwork():
 		with open(os.path.join(os.getcwd(), self.weights_save, "model.json"), "w") as f:
 			f.write(self.model.to_json())
 
-		#Setup Model
-		if os.path.exists(os.path.join(os.getcwd(), self.weights_save, "best.hdf5")):
-			print("Loading previous weights file best.hd5f")
-			self.model.load_weights(os.path.join(os.getcwd(), self.weights_save, "best.hdf5"))
+		#Check for new network
+		r = requests.get("https://zero.generalzero.org/newest_network")
+		if r.status_code == 200:
+			new_net = r.text
+			self.network = new_net
+
+			#Download new network
+			if not os.path.exists(os.path.join(os.getcwd(), self.weights_save, new_net)):
+				r = requests.get("https://zero.generalzero.org/networks/{}".format(new_net), stream=True)
+				with open(new_net, 'wb') as fd:
+					for chunk in r.iter_content(chunk_size=128):
+						fd.write(chunk)
 		else:
-			training_files = [filename for filename in os.listdir(os.path.join(os.getcwd(), self.weights_save)) if filename.endswith(".hdf5")]
-			if len(training_files) != 0:
-				training_files = sorted(training_files)
-				print("Loading previous weights file " + training_files[-1])
-				self.model.load_weights(os.path.join(os.getcwd(), self.weights_save, training_files[-1]))
+			#Setup Model
+			if os.path.exists(os.path.join(os.getcwd(), self.weights_save, "best.hdf5")):
+				print("Loading previous weights file best.hd5f")
+				self.model.load_weights(os.path.join(os.getcwd(), self.weights_save, "best.hdf5"))
+			else:
+				training_files = [filename for filename in os.listdir(os.path.join(os.getcwd(), self.weights_save)) if filename.endswith(".hdf5")]
+				if len(training_files) != 0:
+					training_files = sorted(training_files)
+					print("Loading previous weights file " + training_files[-1])
+					self.network = training_files[-1]
+					self.model.load_weights(os.path.join(os.getcwd(), self.weights_save, training_files[-1]))
+
+		self.network = os.path.splitext(self.network)[0]
+
 
 	def train(self, training_generator):
 		#Make generator to return data from training file
-		callback1 = ModelCheckpoint(os.path.join(os.getcwd(), self.weights_save, "best.hdf5"), monitor='val_loss', verbose=2, save_best_only=True, mode='min')
+		callback1 = ModelCheckpoint(os.path.join(os.getcwd(), self.weights_save, "best.hdf5"), monitor='val_dense_2_acc', verbose=2, save_best_only=True, mode='max')
 		#callback2 = keras.callbacks.TensorBoard(log_dir=os.path.join(os.getcwd(), self.weights_save), histogram_freq=0, write_graph=True, write_images=True)
 
 		history = self.model.fit_generator(training_generator, self.train_batch_size, epochs=self.epochs, callbacks=[callback1], validation_data=training_generator, validation_steps=self.validate_batch_size, verbose=1)
 
+	def set_epoch(self, file_names):
+		count = 0
+		for file_name in file_names:
+		#print("Getting Training data from {}".format(file_name))
+
+			with h5py.File(os.path.join(os.getcwd(), "best_10", file_name), 'r') as hf:
+				y_train_2 = hf["winner"][:]
+				count += y_train_2.shape[0]
+
+		self.epochs = (count / self.number_of_samples) // (15 + self.train_batch_size + self.validate_batch_size)
+		print("Count {} Epochs {}".format(count, self.epochs))
 
 	def training_files_generator(self, file_names):
 		print("Start Training Generator")
@@ -164,7 +193,7 @@ class TakZeroNetwork():
 						all_y_train_1 = y_train_1[start_index:end_index]
 						all_y_train_2 = y_train_2[start_index:end_index]
 
-					#print("Returning (x_shape: {}, y_shape:{})".format(all_x_train.shape, all_y_train.shape))
+					#print("Returning (x_shape: {})".format(all_x_train.shape))
 
 					yield (all_x_train, [all_y_train_1, all_y_train_2])
 
@@ -176,6 +205,13 @@ class TakZeroNetwork():
 					left_over_size = array_size - end_index
 					left_overs = True
 
+	def predict(self, x_input, batch_size=1):
+		#print(x_input.shape)
+		ret = self.model.predict(x_input, batch_size=batch_size)
+		#print(ret[0][0].shape)
+		#print(ret[1][0].shape)
+		return ret[0][0], ret[1][0]
+
 if __name__ == '__main__':
 	ai = TakZeroNetwork()
 
@@ -183,5 +219,7 @@ if __name__ == '__main__':
 
 	training_files = [filename for filename in os.listdir(os.path.join(os.getcwd(), "best_10")) if filename.startswith("train")]
 	random.shuffle(training_files)
+
+	ai.set_epoch(training_files)
 
 	ai.train(ai.training_files_generator(training_files))

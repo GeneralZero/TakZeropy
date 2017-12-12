@@ -320,7 +320,7 @@ def open_game_file(filename, folder):
 
 
 				#get indexes of the non 0 moves
-				for idx in np.where(probs != 0)[0]:
+				for idx in np.where(probs != 0 or probs != -1)[0]:
 					if idx == 1575:
 						break
 
@@ -335,14 +335,17 @@ def open_game_file(filename, folder):
 						new_move["direction"] = transform_directon(old_move["direction"], rotate)
 
 						new_idx = get_play_index(new_move)
-						new_probs[rotate][new_idx] = probs[idx] / probs[1575]
+						if probs[idx] > 1:
+							new_probs[rotate][new_idx] = probs[idx] / probs[1575]
+						else:
+							new_probs[rotate][new_idx] = probs[idx]
 
 				prev_board[rotate][index%save_n_moves] = new_state
 
 				#Append
-				build = [prev_board[rotate][(index+x)%save_n_moves] for x in range(save_n_moves)]
-				if index == 1 or index % 2 ==0:
-					#Black to place
+				build = [prev_board[rotate][(index-x)%save_n_moves] for x in range(save_n_moves)]
+				if index % 2 == 0:
+					#White to place
 					build.append(np.full((board_size,board_size,64), 1, dtype="B"))
 					build.append(np.full((board_size,board_size,64), 0, dtype="B"))
 				else:

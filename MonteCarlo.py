@@ -1,16 +1,18 @@
-import random, h5py, os, multiprocessing
+import random, h5py, os
 import numpy as np
 from board import TakBoard
 from time import time
-import hashlib
+import hashlib, requests
 from Node import UCTNode
+from train import TakZeroNetwork
 #np.set_printoptions(threshold=np.nan)
 
 class UCTTakGame():
 	"""docstring for UCTGame"""
-	def __init__(self, ittermult=100):
+	def __init__(self, ai, ittermult=100):
 		self.ittermult = ittermult
 		self.verbose = False
+		self.ai = ai
 
 		self.game = TakBoard(5)
 		self.rootnode = UCTNode(state = self.game)
@@ -27,10 +29,9 @@ class UCTTakGame():
 			print("Random Move: {}, Trys: {}, took {:.6f}s".format(m.move, m.visits, time() - start_time), flush=True)
 
 			np_state = self.game.get_numpy_board()
-			addition = np.full(1576, 0, dtype=int)
+			addition = np.full(1575, -1, dtype=int)
 			for moves in self.childNodes:
-				addition[moves.move["index"]] = moves.visits
-			addition[1575] = self.rootnode.visits
+				addition[moves.move["index"]] = moves.wins / moves.visits
 			#print(winrate)
 
 			train_data.append({"probs":addition, "state":np_state})
@@ -88,8 +89,12 @@ class UCTTakGame():
 		if node.untriedMoves != []: # if we can expand (i.e. state/node is non-terminal)
 			m = random.choice(node.untriedMoves)
 			state.exec_move(m)
-			##TODO change actual probability to learned probability
-			prob = 1.0/count * (1 - 0.25) + 0.25 * gamma[idx%count]
+
+			#Get Probs from AI
+			x_input = state.get_input()
+			probs, winner = self.ai.predict(x_input)
+
+			prob = probs[m["index"]] * (1 - 0.25) + 0.25 * gamma[idx%count]
 			idx += 1
 			node = node.AddChild(m,state, prob) # add child and descend tree
 
@@ -108,12 +113,17 @@ class UCTTakGame():
 			node = node.parentNode
 	
 
-def save(training_data):
+def save(training_data, network):
 	#print(training_data)
 	winner = training_data[-1]
 	training_data = training_data[:-1]
 
-	with h5py.File(os.path.join(os.getcwd(), "best_10", "Game_{}.hdf5".format(hashlib.md5(repr(training_data).encode('utf-8')).hexdigest())), 'w') as hf:
+	if not os.path.isdir(os.path.join(os.getcwd(), network)):
+		os.makedirs(os.path.join(os.getcwd(), network))
+
+	name = hashlib.md5(repr(training_data).encode('utf-8')).hexdigest()
+
+	with h5py.File(os.path.join(os.getcwd(), network, "Game_{}.hdf5".format(name)), 'w') as hf:
 		print("Game has {} moves".format(len(training_data)), flush=True)
 		for index, gamedata in enumerate(training_data):
 			hf.create_dataset("state_{}".format(index), data=gamedata["state"], compression="gzip", compression_opts=9)
@@ -121,13 +131,18 @@ def save(training_data):
 
 		hf.create_dataset("white_win", data=np.array([winner]), compression="gzip", compression_opts=9)
 
+	#Upload Game to server
+	r = requests.post("https://zero.generalzero.org/submit_game", files={"game": open(os.path.join(os.getcwd(), network, "Game_{}.hdf5".format(name)), 'rb'), "network": network})
+	if r.status_code == 200:
+		print("Game saved to Server")
+	else:
+		print(r.status_code, r.text)
+
+
 if __name__ == "__main__":
-	#p = UCTTakGame(1)
-	#save(p.main())
-	pool = multiprocessing.Pool(processes=7)
+	ai = TakZeroNetwork()
+	ai.generate_network()
+
 	for x in range(50000):
-		p = UCTTakGame(10)
-		#save(p.main())
-		pool.apply_async(p.main, callback=save)
-	pool.close()
-	pool.join()
+		p = UCTTakGame(ai, 5)
+		save(p.main(), ai.network)

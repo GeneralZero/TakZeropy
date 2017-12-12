@@ -31,6 +31,9 @@ class UCTNode:
 			lambda c: c.wins/c.visits + UCTK * sqrt(2*log(self.visits)/c.visits to vary the amount of
 			exploration versus exploitation.
 		"""
+		#for c in self.childNodes:
+		#	print("Move: {}, WR: {}, VT: {}, PS: {}, DP:{:.5f}, PB: {:.5f}".format(c.move["index"], c.wins/c.visits, c.visits, c.prev_score, sqrt(2*log(self.visits))/(1+c.visits), c.wins/c.visits + self.puct_ratio * c.prev_score * sqrt(2*log(self.visits))/(1+c.visits)))
+		#print()
 		s = sorted(self.childNodes, key = lambda c: c.wins/c.visits + self.puct_ratio * c.prev_score * sqrt(self.visits)/(1+c.visits))[-1]
 		return s
 

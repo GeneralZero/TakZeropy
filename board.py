@@ -37,6 +37,8 @@ class TakBoard():
 
 		self.distance_table = [0,5,15,25,30]
 
+		self.prev_boards = [self.get_numpy_board() for x in range(6)]
+
 	###Monte Carlo Functions
 
 	def clone(self):
@@ -67,6 +69,8 @@ class TakBoard():
 			self.place(move_obj["piece"], move_obj["placement"])
 		else:
 			raise ValueError("Invalid movetype")
+
+		self.prev_boards.append(self.get_numpy_board())
 
 
 	def get_play_index(self, play_obj):
@@ -748,6 +752,19 @@ class TakBoard():
 		#reset counts
 		self.winner_all()
 
+
+	def get_input(self):
+		ret = self.prev_boards[-6:]
+		ret = ret[::-1]
+		if self.player1_turn == True:
+			#White to place
+			ret.append(np.full((self.board_size,self.board_size,64), 1, dtype="B"))
+			ret.append(np.full((self.board_size,self.board_size,64), 0, dtype="B"))
+		else:
+			ret.append(np.full((self.board_size,self.board_size,64), 0, dtype="B"))
+			ret.append(np.full((self.board_size,self.board_size,64), 1, dtype="B"))
+
+		return np.array([ret])
 
 	def get_numpy_board(self):
 		board_array=[]
