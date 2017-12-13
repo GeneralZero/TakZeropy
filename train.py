@@ -106,6 +106,7 @@ class TakZeroNetwork():
 
 					#load new network
 					self.model.load_weights(os.path.join(os.getcwd(), self.weights_save, new_net))
+					self.network = os.path.splitext(self.network)[0]
 			else:
 				raise Error("Could not contact Server")
 		except:
@@ -120,8 +121,9 @@ class TakZeroNetwork():
 					print("Loading previous weights file " + training_files[-1])
 					self.network = training_files[-1]
 					self.model.load_weights(os.path.join(os.getcwd(), self.weights_save, training_files[-1]))
+					self.network = os.path.splitext(self.network)[0]
 
-		self.network = os.path.splitext(self.network)[0]
+		
 
 
 	def train(self, training_generator):
