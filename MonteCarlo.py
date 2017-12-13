@@ -114,6 +114,8 @@ class UCTTakGame():
 	
 
 def save(training_data, network):
+	if network == None:
+		network = "best"
 	#print(training_data)
 	winner = training_data[-1]
 	training_data = training_data[:-1]
@@ -133,6 +135,7 @@ def save(training_data, network):
 
 	#Upload Game to server
 	try:
+		if 
 		r = requests.post("https://zero.generalzero.org/submit_game", data={"network": network}, files={"game": open(os.path.join(os.getcwd(), network, "Game_{}.hdf5".format(name)), 'rb')})
 		if r.status_code == 200:
 			print("Game saved to Server")
