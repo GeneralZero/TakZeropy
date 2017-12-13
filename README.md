@@ -16,9 +16,9 @@ distributed effort to repeat the work. Working together, and especially
 when starting on a smaller scale, it will take less than 1700 years to get
 a good network (which you can feed into this program, suddenly making it strong).
 
-# I need help
+# Want to help
 
-You need a PC with a internet connection. Thats it. GPU support is in development.
+All you need a PC with a internet connection. Thats it.
 
 ## Windows
 
