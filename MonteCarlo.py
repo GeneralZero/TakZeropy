@@ -20,7 +20,7 @@ class UCTTakGame():
 
 	def main(self):
 		train_data = []
-		
+
 		while (self.game.white_win == False and self.game.black_win == False):
 			start_time = time()
 			self.childNodes = self.search()
@@ -54,7 +54,7 @@ class UCTTakGame():
 	def change_root_node(self, childNode):
 		#count = 0
 		#for node in self.childNodes:
-		#	count += node.visits 
+		#	count += node.visits
 		#print("Visits",count)
 		self.rootnode = childNode
 
@@ -111,7 +111,7 @@ class UCTTakGame():
 			else:
 				node.Update(state.black_win)
 			node = node.parentNode
-	
+
 
 def save(training_data, network):
 	if network == None:
@@ -135,7 +135,6 @@ def save(training_data, network):
 
 	#Upload Game to server
 	try:
-		if 
 		r = requests.post("https://zero.generalzero.org/submit_game", data={"network": network}, files={"game": open(os.path.join(os.getcwd(), network, "Game_{}.hdf5".format(name)), 'rb')})
 		if r.status_code == 200:
 			print("Game saved to Server")
