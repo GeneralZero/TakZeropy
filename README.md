@@ -6,16 +6,6 @@ Monte Carlo playouts) and a deep residual convolutional neural network stack.
 This is a fairly faithful interpretation of the system described
 in the Alpha Go Zero paper "Mastering the Game of Go without Human Knowledge".
 
-# Gimme the weights
-
-Recomputing the AlphaGo Zero weights will take about 1700 years on commodity
-hardware, see for example: http://computer-go.org/pipermail/computer-go/2017-October/010307.html
-
-One reason for publishing this program is that we are running a public,
-distributed effort to repeat the work. Working together, and especially
-when starting on a smaller scale, it will take less than 1700 years to get
-a good network (which you can feed into this program, suddenly making it strong).
-
 # Want to help
 
 All you need a PC with a internet connection. Thats it.
